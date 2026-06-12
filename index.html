@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratch Card Birthday Surprise!</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: url("/home/dikshraj/Downloads/data.png") no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            user-select: none;
+            overflow: hidden;
+            perspective: 1000px;
+        }
+        
+        .header-container {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 90%;
+            z-index: 5;
+            transition: opacity 0.5s ease;
+        }
+        .header-container.hidden { opacity: 0; pointer-events: none; }
+        h2 { color: purple; font-size: 1.4rem; margin-bottom: 5px; }
+        .progress { color: black; font-weight: bold; font-size: 0.9rem; }
+
+        .game-container {
+            position: relative;
+            width: 320px;
+            height: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+            border-radius: 20px;
+            background: transparent; 
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        box-shadow 0.4s ease;
+        }
+
+        .game-container.large-viewport { height: 500px; }
+        .game-container.final-reward-viewport { height: 600px; }
+        
+        /* Fixed cinematic height for the final typewriter text screen */
+        .game-container.outro-viewport { height: 350px; }
+
+        .game-container.expanded {
+            transform: scale(1.05); 
+            box-shadow: 0 30px 60px rgba(189, 7, 239, 0.4); 
+        }
+
+        .card-content {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 20px;
+            background: rgba(250, 245, 255, 0.85); 
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(216, 180, 254, 0.4);
+            -webkit-backdrop-filter: blur(8px); 
+            overflow: hidden;
+        }
+
+        .default-view {
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+        }
+        .default-view .emoji { font-size: 3.5rem; margin-bottom: 15px; }
+        .default-view h3 { color: #bd07ef; margin-bottom: 10px; font-size: 1.4rem; }
+        .default-view p { color: #100k; font-size: 1.05rem; line-height: 1.5; }
+
+        .certificate-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+        .certificate-view::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        .card-frame-container {
+            position: relative;
+            width: 100%;
+            max-width: 235px; 
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            background: #fff;
+            flex-shrink: 0;
+            margin-bottom: 15px;
+        }
+
+        .base-card-img { width: 100%; height: auto; display: block; }
+
+        .official-notice-box {
+            background: rgba(254, 243, 199, 0.7); 
+            border: 1px dashed #d97706;
+            border-radius: 14px;
+            padding: 12px 15px;
+            width: 100%;
+            max-width: 235px;
+            text-align: center;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            color: #78350f;
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.05);
+        }
+        .official-notice-box h4 { font-size: 0.9rem; margin-bottom: 6px; color: #b45309; font-weight: bold; }
+        .official-notice-box p { font-size: 0.8rem; line-height: 1.4; font-weight: 500; }
+
+        .reward-view {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            text-align: center;
+            color: #1e1b4b;
+        }
+        .reward-view::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        .reward-heading {
+            font-size: 1.3rem;
+            color: #bd07ef;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .gift-container {
+            width: 100%;
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+        }
+
+        .gift-box {
+            font-size: 6rem;
+            filter: drop-shadow(0 15px 25px rgba(189, 7, 239, 0.3));
+            animation: float 3s ease-in-out infinite, shake 4s ease-in-out infinite;
+        }
+
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes shake { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(5deg); } 90% { transform: rotate(-5deg); } 95% { transform: rotate(5deg); } }
+
+        .gift-container.revealed .gift-box { display: none; }
+        .gift-container.revealed #actionButtonsWrapper { display: none; }
+        
+        .birthday-cake-visual {
+            display: none;
+            font-size: 7rem;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.2));
+            animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .gift-container.revealed .birthday-cake-visual { display: block; }
+
+        #cameraStreamView, #photoPreviewCanvas {
+            display: none;
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #bd07ef;
+            box-shadow: 0 8px 20px rgba(189, 7, 239, 0.2);
+            transform: scaleX(-1);
+        }
+        .gift-container.capturing #cameraStreamView { display: block; }
+        .gift-container.capturing .gift-box { display: none; }
+        
+        .gift-container.previewing #photoPreviewCanvas { display: block; }
+        .gift-container.previewing .gift-box { display: none; }
+
+        #countdownOverlay {
+            display: none;
+            position: absolute;
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 10px #bd07ef, 0 0 20px #bd07ef;
+            z-index: 30;
+        }
+        .gift-container.capturing #countdownOverlay { display: block; }
+
+        .action-container {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            background: #bd07ef;
+            color: #ffffff;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(189, 7, 239, 0.2);
+            transition: transform 0.2s, background 0.2s;
+        }
+        .action-btn:hover { background: #9d05c6; transform: scale(1.03); }
+        .action-btn.secondary { background: #4b5563; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+        .action-btn.secondary:hover { background: #374151; }
+
+        .reward-post-reveal-content {
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.8s ease;
+        }
+        .game-container.revealed-all .reward-post-reveal-content {
+            opacity: 1;
+            height: auto; 
+            overflow: visible;
+        }
+
+        .premium-photo-frame {
+            width: 100%;
+            max-width: 190px;
+            height: 240px;
+            margin: 15px auto 25px auto;
+            background: #fff;
+            padding: 12px; 
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(189, 7, 239, 0.25);
+            position: relative;
+            border: 2px solid rgba(216, 180, 254, 0.4);
+        }
+        
+        .premium-photo-frame::before {
+            content: "";
+            position: absolute;
+            top: 6px; left: 6px; right: 6px; bottom: 6px;
+            border: 1px solid #bd07ef;
+            border-radius: 12px;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+        
+        .photo-wrapper-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(189, 7, 239, 0.2);
+        }
+
+        .premium-photo-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transform: scaleX(-1); 
+        }
+
+        .cert-awardee {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #bd07ef;
+            margin: 15px 0 10px 0;
+        }
+
+        .birthday-message-wish {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #1e1b4b;
+            margin-bottom: 25px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .level-up-box {
+            width: 100%;
+            border-top: 2px solid rgba(189, 7, 239, 0.3);
+            border-bottom: 2px solid rgba(189, 7, 239, 0.3);
+            padding: 15px 10px;
+            margin-bottom: 25px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #bd07ef;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        .level-up-line {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        /* --- TYPEWRITER OUTRO RENDER STYLES --- */
+        .typewriter-outro-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 35px;
+            text-align: center;
+            font-size: 1.15rem;
+            font-weight: bold;
+            line-height: 1.6;
+            color: #1e1b4b;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .typewriter-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.2rem;
+            background-color: #bd07ef;
+            margin-left: 3px;
+            animation: blinkCursor 0.8s steps(2, start) infinite;
+            vertical-align: middle;
+        }
+        @keyframes blinkCursor { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+        .next-btn {
+            padding: 10px 24px;
+            background: #bd07ef;
+            color: #ffffff;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.2s ease;
+            transform: translateY(10px);
+            z-index: 20;
+            flex-shrink: 0;
+            margin-bottom: 10px;
+        }
+        
+        .next-btn.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .next-btn:hover { background: #9d05c6; }
+
+        .balloon-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 200;
+        }
+        .balloon {
+            position: absolute;
+            bottom: -150px;
+            width: 50px;
+            height: 65px;
+            border-radius: 50%;
+            animation: floatBalloon 6s ease-in forwards;
+        }
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -25px; left: 50%;
+            width: 1px; height: 25px;
+            background: rgba(100, 100, 100, 0.4);
+        }
+        @keyframes floatBalloon {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-120vh) rotate(10deg); opacity: 0; }
+        }
+
+        #scratchCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            cursor: pointer;
+            z-index: 10;
+            border-radius: 20px;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="balloon-container" id="balloonContainer"></div>
+
+    <div class="header-container" id="headerContainer">
+        <h2>✨ Explore The Day ✨</h2>
+        <div class="progress" id="progressText"></div>
+    </div>
+
+    <div class="game-container" id="cardContainer">
+        <div class="card-content" id="mainCardWrapper">
+            
+            <div class="default-view" id="defaultCardView">
+                <div class="emoji" id="cardEmoji">🎂</div>
+                <h3 id="cardTitle">Loading Wish...</h3>
+                <p id="cardText">Loading text...</p>
+                <button class="next-btn" id="nextCardBtnDefault">Next Card ➔</button>
+            </div>
+
+            <div class="certificate-view" id="certificateCardView">
+                <div class="card-frame-container">
+                    <img src="/home/dikshraj/Downloads/icecream2.png" class="base-card-img" alt="Ice Cream Lover Template">
+                </div>
+                <div class="official-notice-box">
+                    <h4>⚠ Official Notice</h4>
+                    <p>By viewing this card,<br>the holder agrees to provide<br>one (1) ice cream to the creator.<br><br><strong>Terms are non-negotiable. 🍨</strong></p>
+                </div>
+                <button class="next-btn" id="nextCardBtnCert">Proceed to Final Card 🎂</button>
+            </div>
+
+            <div class="reward-view" id="rewardCardView">
+                <div class="reward-heading">🎁 Birthday Reward Unlocked</div>
+
+                <div class="gift-container" id="giftSection">
+                    <div class="gift-box" id="interactableGiftBox">🎁</div>
+                    
+                    <video id="cameraStreamView" autoplay playsinline></video>
+                    <img id="photoPreviewCanvas" alt="Selfie Preview Node">
+                    <div id="countdownOverlay">3</div>
+
+                    <div class="action-container" id="actionButtonsWrapper">
+                        <button class="action-btn" id="primaryWorkflowBtn" onclick="initiateCameraCaptureWorkflow()">Open Gift 🎀</button>
+                    </div>
+
+                    <div class="birthday-cake-visual">🎂</div>
+                </div>
+
+                <div class="reward-post-reveal-content" id="finalMessageContent">
+                    <div class="cert-awardee">🎂 Happy Birthday 🎂</div>
+                    
+                    <div class="premium-photo-frame">
+                        <div class="photo-wrapper-inner">
+                            <img id="capturedFriendPhoto" src="" alt="Locked Memory">
+                        </div>
+                    </div>
+
+                    <div class="birthday-message-wish">
+                        "Wishing you a year filled with<br>
+                        🍨 Great Ice Cream<br>
+                        📚 Interesting Adventures<br>
+                        🐶 Happy Moments<br>
+                        ✨ Amazing Memories<br>
+                        🎉 Lots of Laughter"
+                    </div>
+
+                    <div class="level-up-box">
+                        <div class="level-up-line" style="justify-content: center; font-weight: bold; margin-bottom: 8px;">━━━━━━━━━━━━━━</div>
+                        <div class="level-up-line" style="justify-content: center; font-weight: bold; margin-bottom: 8px;">LEVEL UP COMPLETE</div>
+                        <div class="level-up-line"><span>Age:</span><span>+1</span></div>
+                        <div class="level-up-line"><span>Happiness:</span><span>+100</span></div>
+                        <div class="level-up-line"><span>Cake Supply:</span><span>Loaded</span></div>
+                        <div class="level-up-line"><span>Ice Cream Supply:</span><span>Loaded</span></div>
+                        <div class="level-up-line"><span>Birthday Energy:</span><span>Maximum</span></div>
+                        <div class="level-up-line" style="justify-content: center; font-weight: bold; margin-top: 8px;">━━━━━━━━━━━━━━</div>
+                    </div>
+
+                    <button class="next-btn" id="finalEndBtn" style="opacity: 1; pointer-events: auto; margin-top: 10px;" onclick="closeAppCinematicFinale()">don't forget to click me</button>
+                </div>
+            </div>
+
+        </div>
+        <canvas id="scratchCanvas" width="320" height="400"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        const dataDeck = [
+            {
+                emoji: "🤔",
+                title: "12 th June?",
+                text: "Wait... isn't today the day a certain ice-cream-loving human leveled up by +1 year? Scratch away to continue the adventure! 🎂✨",
+                coverColor: "pink",
+                coverText: "SCRATCH CARD #1",
+                isCertificate: false,
+                isRewardCard: false
+            },
+            {
+                coverColor: "pink",
+                coverText: "SCRATCH CARD #2",
+                isCertificate: true,
+                isRewardCard: false
+            },
+            {
+                coverColor: "pink",
+                coverText: "THE FINAL SURPRISE",
+                isCertificate: false,
+                isRewardCard: true
+            }
+        ];
+
+        let currentCardIndex = 0;
+        const cardContainer = document.getElementById('cardContainer');
+        const canvas = document.getElementById('scratchCanvas');
+        const nextBtnDefault = document.getElementById('nextCardBtnDefault');
+        const nextBtnCert = document.getElementById('nextCardBtnCert');
+        const rewardView = document.getElementById('rewardCardView');
+        const ctx = canvas.getContext('2d');
+        const balloonContainer = document.getElementById('balloonContainer');
+        let isDrawing = false;
+        let isCardCleared = false;
+        
+        let scrollAnimationId = null;
+        let userInterruptedScroll = false;
+        let cameraLocalStream = null;
+        let finalSavedDataUrl = null;
+
+        // --- CORE AUDIO ENGINE LOAD CONFIGURATION ---
+        const birthdayAudioSong = new Audio("/home/dikshraj/Downloads/birth.mp3");
+        birthdayAudioSong.loop = true; 
+
+        function loadCard(index) {
+            if (index >= dataDeck.length) return;
+            
+            isCardCleared = false;
+            canvas.style.visibility = 'visible';
+            canvas.style.opacity = '1';
+            cardContainer.classList.remove('expanded');
+            
+            nextBtnDefault.classList.remove('visible');
+            nextBtnCert.classList.remove('visible');
+            
+            document.getElementById('progressText').innerText = `Card ${index + 1} of ${dataDeck.length}`;
+
+            if (dataDeck[index].isCertificate) {
+                cardContainer.classList.remove('final-reward-viewport');
+                cardContainer.classList.add('large-viewport'); 
+                canvas.height = 500; 
+                
+                document.getElementById('defaultCardView').style.display = 'none';
+                document.getElementById('rewardCardView').style.display = 'none';
+                document.getElementById('certificateCardView').style.display = 'flex'; 
+            } else if (dataDeck[index].isRewardCard) {
+                cardContainer.classList.remove('large-viewport');
+                cardContainer.classList.remove('final-reward-viewport');
+                canvas.height = 400; 
+                
+                document.getElementById('defaultCardView').style.display = 'none';
+                document.getElementById('certificateCardView').style.display = 'none';
+                document.getElementById('rewardCardView').style.display = 'block';
+                
+                document.getElementById('giftSection').classList.remove('revealed');
+                cardContainer.classList.remove('revealed-all');
+                rewardView.scrollTop = 0;
+                userInterruptedScroll = false;
+                if(scrollAnimationId) cancelAnimationFrame(scrollAnimationId);
+            } else {
+                cardContainer.classList.remove('large-viewport'); 
+                cardContainer.classList.remove('final-reward-viewport');
+                canvas.height = 400; 
+                
+                document.getElementById('defaultCardView').style.display = 'flex';
+                document.getElementById('certificateCardView').style.display = 'none';
+                document.getElementById('rewardCardView').style.display = 'none';
+                
+                document.getElementById('cardEmoji').innerText = dataDeck[index].emoji;
+                document.getElementById('cardTitle').innerText = dataDeck[index].title;
+                document.getElementById('cardText').innerText = dataDeck[index].text;
+            }
+
+            ctx.globalCompositeOperation = 'source-over'; 
+            ctx.fillStyle = dataDeck[index].coverColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(dataDeck[index].coverText, canvas.width / 2, canvas.height / 2 - 10);
+            
+            ctx.font = '14px Arial';
+            ctx.fillText('✨ Rub screen to wipe clean ✨', canvas.width / 2, canvas.height / 2 + 20);
+        }
+
+        function scratch(e) {
+            if (!isDrawing || isCardCleared) return;
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = clientX - rect.left;
+            const y = clientY - rect.top;
+            ctx.globalCompositeOperation = 'destination-out'; 
+            ctx.beginPath();
+            ctx.arc(x, y, 26, 0, Math.PI * 2); 
+            ctx.fill();
+        }
+
+        canvas.addEventListener('mousedown', () => isDrawing = true);
+        canvas.addEventListener('touchstart', () => isDrawing = true);
+        window.addEventListener('mouseup', () => { if(isDrawing) { isDrawing = false; checkProgress(); } });
+        window.addEventListener('touchend', () => { if(isDrawing) { isDrawing = false; checkProgress(); } });
+        canvas.addEventListener('mousemove', scratch);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); scratch(e); });
+
+        function checkProgress() {
+            if (isCardCleared) return;
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+            let clearCounter = 0;
+            for (let i = 3; i < pixels.length; i += 4) { if (pixels[i] === 0) clearCounter++; }
+            const scratchPercent = (clearCounter / (pixels.length / 4)) * 100;
+            
+            if (scratchPercent > 45) { 
+                isCardCleared = true;
+                canvas.style.opacity = '0'; 
+                setTimeout(() => { canvas.style.visibility = 'hidden'; }, 400); 
+                
+                cardContainer.classList.add('expanded'); 
+                confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+
+                if (dataDeck[currentCardIndex].isCertificate) {
+                    nextBtnCert.classList.add('visible');
+                } else if (dataDeck[currentCardIndex].isRewardCard) {
+                    cardContainer.classList.add('large-viewport');
+                    setTimeout(() => {
+                        document.getElementById('rewardCardView').style.display = 'block';
+                    }, 400);
+                } else {
+                    if (currentCardIndex < dataDeck.length - 1) {
+                        nextBtnDefault.classList.add('visible');
+                    } else {
+                        document.getElementById('progressText').innerText = "All cards unlocked! ❤️";
+                        confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+                    }
+                }
+            }
+        }
+
+        // --- CAMERA WORKFLOW ENGINE ---
+        async function initiateCameraCaptureWorkflow() {
+            const giftSec = document.getElementById('giftSection');
+            const videoNode = document.getElementById('cameraStreamView');
+            const countdownOverlay = document.getElementById('countdownOverlay');
+            const controlWrapper = document.getElementById('actionButtonsWrapper');
+            
+            giftSec.classList.remove('previewing');
+            controlWrapper.innerHTML = '';
+
+            try {
+                cameraLocalStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 400, height: 400, facingMode: "user" }, 
+                    audio: false 
+                });
+                videoNode.srcObject = cameraLocalStream;
+                giftSec.classList.add('capturing'); 
+
+                let count = 3;
+                countdownOverlay.innerText = count;
+                
+                let timerId = setInterval(() => {
+                    count--;
+                    if(count > 0) {
+                        countdownOverlay.innerText = count;
+                    } else {
+                        clearInterval(timerId);
+                        executeSelfieSnapshotWorkflow(videoNode, giftSec);
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.warn("Camera init exception:", err);
+                proceedToMainRevealAnimation(); 
+            }
+        }
+
+        function executeSelfieSnapshotWorkflow(videoElement, giftContainerElement) {
+            const snapCanvas = document.createElement('canvas');
+            snapCanvas.width = videoElement.videoWidth || 400;
+            snapCanvas.height = videoElement.videoHeight || 400;
+            const snapCtx = snapCanvas.getContext('2d');
+            snapCtx.drawImage(videoElement, 0, 0, snapCanvas.width, snapCanvas.height);
+            
+            finalSavedDataUrl = snapCanvas.toDataURL('image/jpeg');
+            
+            if (cameraLocalStream) {
+                cameraLocalStream.getTracks().forEach(track => track.stop());
+            }
+
+            giftContainerElement.classList.remove('capturing');
+            giftContainerElement.classList.add('previewing');
+            document.getElementById('photoPreviewCanvas').src = finalSavedDataUrl;
+
+            const controlWrapper = document.getElementById('actionButtonsWrapper');
+            controlWrapper.innerHTML = `
+                <button class="action-btn secondary" onclick="initiateCameraCaptureWorkflow()">Retake 🔄</button>
+                <button class="action-btn" onclick="confirmPhotoAndUnlockFinalReward()">Looks Perfect! ➔</button>
+            `;
+        }
+
+        function confirmPhotoAndUnlockFinalReward() {
+            // Play track audio loop when she clicks confirmed looks perfect button checklist node
+            birthdayAudioSong.play().catch(error => {
+                console.log("Audio permission delay trigger context:", error);
+            });
+
+            document.getElementById('capturedFriendPhoto').src = finalSavedDataUrl;
+            proceedToMainRevealAnimation();
+        }
+
+        function proceedToMainRevealAnimation() {
+            const giftSec = document.getElementById('giftSection');
+            giftSec.className = 'gift-container revealed'; 
+
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.55 } });
+            spawnCinematicBalloonsUpRoutine();
+            spawnCinematicSparklesAroundCenterRoutine();
+
+            cardContainer.classList.remove('large-viewport');
+            cardContainer.classList.add('final-reward-viewport'); 
+            
+            setTimeout(() => {
+                cardContainer.classList.add('revealed-all'); 
+                startCinematicAutoScroll();
+            }, 600); 
+        }
+
+        function startCinematicAutoScroll() {
+            if(scrollAnimationId) cancelAnimationFrame(scrollAnimationId);
+            
+            const duration = 14000; 
+            const startPosition = rewardView.scrollTop;
+            const targetPosition = (rewardView.scrollHeight - rewardView.clientHeight) + 30; 
+            const distance = targetPosition - startPosition;
+            let startTime = null;
+
+            if (distance <= 0) return;
+
+            function scrollStep(timestamp) {
+                if (userInterruptedScroll) return; 
+                if (!startTime) startTime = timestamp;
+                
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                rewardView.scrollTop = startPosition + (distance * progress);
+
+                if (progress < 1) {
+                    scrollAnimationId = requestAnimationFrame(scrollStep);
+                }
+            }
+            scrollAnimationId = requestAnimationFrame(scrollStep);
+        }
+
+        rewardView.addEventListener('touchstart', () => { userInterruptedScroll = true; });
+        rewardView.addEventListener('wheel', () => { userInterruptedScroll = true; });
+        rewardView.addEventListener('mousedown', () => { userInterruptedScroll = true; });
+
+        function spawnCinematicBalloonsUpRoutine() {
+            const colors = ['#bd07ef', '#f472b6', '#60a5fa', '#34d399', '#fbbf24', '#f87171'];
+            for (let i = 0; i < 25; i++) {
+                setTimeout(() => {
+                    const balloon = document.createElement('div');
+                    balloon.classList.add('balloon');
+                    balloon.style.left = Math.random() * 90 + 5 + '%';
+                    balloon.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    balloonContainer.appendChild(balloon);
+                    setTimeout(() => { balloon.remove(); }, 6000);
+                }, i * 180); 
+            }
+        }
+
+        function spawnCinematicSparklesAroundCenterRoutine() {
+            const colors = ['#bd07ef', '#ffffff', '#ffeb3b'];
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    confetti({ 
+                        particleCount: 3, 
+                        spread: 15, 
+                        colors: [colors[Math.floor(Math.random() * colors.length)]],
+                        startVelocity: 8,
+                        gravity: 0.6,
+                        scalar: 0.7,
+                        origin: { x: Math.random() * 0.4 + 0.3, y: 0.45 } 
+                    });
+                }, i * 90);
+            }
+        }
+
+        // --- UPDATED TYPEWRITER OUTRO ROUTINE ENGINE WITH AUDIO CLOSURE ---
+        function closeAppCinematicFinale() {
+            // --- AUDIO SHUT DOWN TERMINATION NODE ---
+            // Instantly pause and kill audio song track payload execution context loop
+            birthdayAudioSong.pause();
+            birthdayAudioSong.currentTime = 0; // Resets track bookmark pointer index completely
+
+            document.getElementById('headerContainer').classList.add('hidden');
+            
+            cardContainer.classList.remove('expanded');
+            cardContainer.classList.remove('final-reward-viewport');
+            cardContainer.classList.add('outro-viewport');
+            
+            const wrapper = document.getElementById('mainCardWrapper');
+            wrapper.innerHTML = `<div class="typewriter-outro-container"><span id="typewriterTargetText"></span><span class="typewriter-cursor"></span></div>`;
+            
+            confetti({ particleCount: 200, spread: 130, origin: { y: 0.55 }, scalar: 1.1 });
+
+            const closureTextString = "uhh...\nhuhh...\njanta hu thoda late wish\nkar raha hu 😅\npar finally itna hi kar sakta tha\nso bye...\nand remember...\nwisdom has been chasing you,\nbut you have always been faster. 😌";
+            
+            let charIndex = 0;
+            const typingSpeedMs = 50; 
+            const textContainer = document.getElementById('typewriterTargetText');
+
+            function typeLetter() {
+                if (charIndex < closureTextString.length) {
+                    const currentChar = closureTextString.charAt(charIndex);
+                    if (currentChar === "\n") {
+                        textContainer.innerHTML += "<br>";
+                    } else {
+                        textContainer.innerHTML += currentChar;
+                    }
+                    charIndex++;
+                    setTimeout(typeLetter, typingSpeedMs);
+                }
+            }
+            
+            setTimeout(typeLetter, 600);
+        }
+
+        nextBtnDefault.addEventListener('click', () => { currentCardIndex++; loadCard(currentCardIndex); });
+        nextBtnCert.addEventListener('click', () => { currentCardIndex++; loadCard(currentCardIndex); });
+
+        loadCard(currentCardIndex);
+    </script>
+</body>
+</html>
